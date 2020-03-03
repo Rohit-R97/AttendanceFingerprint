@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">TapTap</string>
+    <string name="fetch">fetch</string>
+    <string name="attendance">attendance</string>
+    <string name="register">register</string>
+    <string name="record">RECORD</string>
+</resources>
