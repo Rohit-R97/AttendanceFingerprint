@@ -1,17 +1,22 @@
 package com.example.taptap.ui.main;
 
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.taptap.R;
 
-public class FetchTab extends AppCompatActivity {
+
+public class RegisterTab extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.tab_fetch);
+        setContentView(R.layout.tab_register);
+
     }
 
+    public void onRegisterClick(View view) {
+    }
 }
