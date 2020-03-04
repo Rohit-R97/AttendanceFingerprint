@@ -7,9 +7,11 @@
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
+        android:theme="@style/AppTheme.AppBarOverlay"
+        app:layout_anchorGravity="bottom|center">
 
         <TextView
             android:id="@+id/title"
@@ -29,24 +31,24 @@
 
             <com.google.android.material.tabs.TabItem
                 android:id="@+id/tab1"
-                android:text="@string/register"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorPrimary"/>
+                android:background="?attr/colorPrimary"
+                android:text="@string/register" />
 
             <com.google.android.material.tabs.TabItem
                 android:id="@+id/tab2"
-                android:text="@string/attendance"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorPrimary" />
+                android:background="?attr/colorPrimary"
+                android:text="@string/attendance" />
 
             <com.google.android.material.tabs.TabItem
                 android:id="@+id/tab3"
-                android:text="@string/fetch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/colorPrimary"/>
+                android:background="?attr/colorPrimary"
+                android:text="@string/fetch" />
         </com.google.android.material.tabs.TabLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -55,6 +57,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" >
+
 
     </androidx.viewpager.widget.ViewPager>
 

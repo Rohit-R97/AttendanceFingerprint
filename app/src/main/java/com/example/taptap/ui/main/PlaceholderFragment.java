@@ -34,7 +34,7 @@ public class PlaceholderFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        pageViewModel = ViewModelProviders.of(this).get(PageViewModel.class);
+//        pageViewModel = VinewInstanceewModelProviders.of(this).get(PageViewModel.class);
 //        int index = 1;
 //        if (getArguments() != null) {
 //            index = getArguments().getInt(ARG_SECTION_NUMBER);

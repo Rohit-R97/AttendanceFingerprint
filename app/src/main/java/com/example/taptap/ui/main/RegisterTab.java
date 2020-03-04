@@ -20,5 +20,6 @@ public class RegisterTab extends AppCompatActivity {
     }
 
     public void onRegisterClick(View view) {
+        
     }
 }
