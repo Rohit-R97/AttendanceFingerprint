@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         //DumpFile("register.raw", mRegisterImage);
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
-        Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed + dwTimeStart + dwTimeEnd+ "ms]\n");
+        Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed +"ms "+ dwTimeStart +"ms "+ dwTimeEnd+ "ms]\n");
 
         ImageView mImageViewFingerprint = (ImageView)findViewById(R.id.imageView);
         mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
