@@ -7,22 +7,31 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
+import android.graphics.Bitmap;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
+import com.example.taptap.ui.main.RegisterTab;
 import com.example.taptap.ui.main.SectionsPagerAdapter;
 import com.google.android.material.tabs.TabLayout;
 
+import java.nio.ByteBuffer;
+
 import SecuGen.FDxSDKPro.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SGFingerPresentEvent {
     private EditText mEditLog;
     private static final String TAG = "SecuGen USB";
     private PendingIntent mPermissionIntent;
@@ -35,13 +44,14 @@ public class MainActivity extends AppCompatActivity {
     private int mImageDPI;
     private byte[] mRegisterTemplate;
     private byte[] mVerifyTemplate;
+    private byte[] mRegisterImage;
     private int[] mMaxTemplateSize;
     private boolean mLed;
     private int nCaptureModeN;
     private SGAutoOnEventNotifier autoOn;
     private boolean mAutoOnEnabled;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
-
+    long dwTimeStart = 0, dwTimeEnd = 0, dwTimeElapsed = 0;
 //    private void debugMessage(String message) {
 //       // this.mEditLog.append(message);
 //        //this.mEditLog.invalidate(); //TODO trying to get Edit log to update after each line written
@@ -90,13 +100,69 @@ public class MainActivity extends AppCompatActivity {
         mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
         filter = new IntentFilter(ACTION_USB_PERMISSION);
         sgfplib = new JSGFPLib((UsbManager) getSystemService(Context.USB_SERVICE));
+        autoOn = new SGAutoOnEventNotifier(sgfplib, this);
         Log.d(TAG,"JSGFPLib version: " + sgfplib.GetJSGFPLibVersion() + "\n");
         mLed = false;
-        mAutoOnEnabled = false;
+        mAutoOnEnabled = true;
         //autoOn = new SGAutoOnEventNotifier(sgfplib, this);
         nCaptureModeN = 0;
         Log.d(TAG, "Exit onCreate()");
         mMaxTemplateSize=new int[1];
+
+
+    }
+
+
+
+    public void SGFingerPresentCallback (){
+        //autoOn.stop();
+        CaptureFingerPrint();
+        Log.d(TAG, "Finger Present here");
+        //fingerDetectedHandler.sendMessage(new Message());
+    }
+
+    public void CaptureFingerPrint(){
+       mRegisterImage = new byte[mImageWidth*mImageHeight];
+//        long result = sgfplib.GetImage(buffer);
+        if (mRegisterImage != null)
+            mRegisterImage = null;
+        mRegisterImage = new byte[mImageWidth*mImageHeight];
+
+        //this.mCheckBoxMatched.setChecked(false);
+        dwTimeStart = System.currentTimeMillis();
+        long result = sgfplib.GetImage(mRegisterImage);
+        //DumpFile("register.raw", mRegisterImage);
+        dwTimeEnd = System.currentTimeMillis();
+        dwTimeElapsed = dwTimeEnd-dwTimeStart;
+        Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed + dwTimeStart + dwTimeEnd+ "ms]\n");
+
+        ImageView mImageViewFingerprint = (ImageView)findViewById(R.id.imageView);
+        mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
+        dwTimeStart = System.currentTimeMillis();
+//            result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
+        result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
+        dwTimeEnd = System.currentTimeMillis();
+        dwTimeElapsed = dwTimeEnd-dwTimeStart;
+//            debugMessage("SetTemplateFormat(ISO19794) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
+        Log.d(TAG,"SetTemplateFormat(SG400) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
+
+        int quality1[] = new int[1];
+        result = sgfplib.GetImageQuality(mImageWidth, mImageHeight, mRegisterImage, quality1);
+        Log.d(TAG,"GetImageQuality() ret:" +  result + "quality [" + quality1[0] + "]\n");
+
+    }
+
+    public Bitmap toGrayscale(byte[] mImageBuffer)
+    {
+        byte[] Bits = new byte[mImageBuffer.length * 4];
+        for (int i = 0; i < mImageBuffer.length; i++) {
+            Bits[i * 4] = Bits[i * 4 + 1] = Bits[i * 4 + 2] = mImageBuffer[i]; // Invert the source bits
+            Bits[i * 4 + 3] = -1;// 0xff, that's the alpha.
+        }
+
+        Bitmap bmpGrayscale = Bitmap.createBitmap(mImageWidth, mImageHeight, Bitmap.Config.ARGB_8888);
+        bmpGrayscale.copyPixelsFromBuffer(ByteBuffer.wrap(Bits));
+        return bmpGrayscale;
     }
 
     protected void onResume() {
@@ -193,11 +259,12 @@ public class MainActivity extends AppCompatActivity {
                         //if (smartCaptureEnabled)
                         //sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte)1);
                         //else
-//                        sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 0);
-//                        if (mAutoOnEnabled) {
-//                            autoOn.start();
-//
-//                        }
+                        sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 1);
+                        if (mAutoOnEnabled) {
+                            autoOn.start();
+
+                        }
+                        CaptureFingerPrint();
                     } else {
                         Log.d(TAG, "Waiting for USB Permission\n");
                     }
