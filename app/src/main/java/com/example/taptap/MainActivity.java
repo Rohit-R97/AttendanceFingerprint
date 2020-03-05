@@ -1,7 +1,5 @@
 package com.example.taptap;
 
-import SecuGen.FDxSDKPro.*;
-
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -12,23 +10,17 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.tabs.TabLayout;
-
-import androidx.viewpager.widget.ViewPager;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager.widget.ViewPager;
 
 import com.example.taptap.ui.main.SectionsPagerAdapter;
+import com.google.android.material.tabs.TabLayout;
+
+import SecuGen.FDxSDKPro.*;
 
 public class MainActivity extends AppCompatActivity {
     private EditText mEditLog;
@@ -100,10 +92,11 @@ public class MainActivity extends AppCompatActivity {
         sgfplib = new JSGFPLib((UsbManager) getSystemService(Context.USB_SERVICE));
         Log.d(TAG,"JSGFPLib version: " + sgfplib.GetJSGFPLibVersion() + "\n");
         mLed = false;
-        mAutoOnEnabled = true;
-        autoOn = new SGAutoOnEventNotifier(sgfplib, this);
+        mAutoOnEnabled = false;
+        //autoOn = new SGAutoOnEventNotifier(sgfplib, this);
         nCaptureModeN = 0;
         Log.d(TAG, "Exit onCreate()");
+        mMaxTemplateSize=new int[1];
     }
 
     protected void onResume() {
@@ -200,11 +193,11 @@ public class MainActivity extends AppCompatActivity {
                         //if (smartCaptureEnabled)
                         //sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte)1);
                         //else
-                        sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 0);
-                        if (mAutoOnEnabled) {
-                            autoOn.start();
-
-                        }
+//                        sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 0);
+//                        if (mAutoOnEnabled) {
+//                            autoOn.start();
+//
+//                        }
                     } else {
                         Log.d(TAG, "Waiting for USB Permission\n");
                     }
