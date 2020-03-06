@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     long dwTimeStart = 0, dwTimeEnd = 0, dwTimeElapsed = 0;
 //    private void debugMessage(String message) {
 //       // this.mEditLog.append(message);
-//        //this.mEditLog.invalidate(); //TODO trying to get Edit log to update after each line written
+//        //this.mEditLog.invalidate(); 
 //    }
 
     private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
