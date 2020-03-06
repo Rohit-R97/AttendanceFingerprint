@@ -7,14 +7,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -23,7 +19,6 @@ import android.graphics.Bitmap;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
-import com.example.taptap.ui.main.RegisterTab;
 import com.example.taptap.ui.main.SectionsPagerAdapter;
 import com.google.android.material.tabs.TabLayout;
 
@@ -116,8 +111,11 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
     public void SGFingerPresentCallback (){
         //autoOn.stop();
+        //byte []  tempFingerPrint;
         CaptureFingerPrint();
         Log.d(TAG, "Finger Present here");
+        //long res=0;
+       // res = sgfplib.GetImageEx(tempFingerPrint,2000, 50);
         //fingerDetectedHandler.sendMessage(new Message());
     }
 
@@ -130,13 +128,13 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
         //this.mCheckBoxMatched.setChecked(false);
         dwTimeStart = System.currentTimeMillis();
-        long result = sgfplib.GetImage(mRegisterImage);
+        long result = sgfplib.GetImageEx(mRegisterImage, 2000, 100);
         //DumpFile("register.raw", mRegisterImage);
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
         Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed +"ms "+ dwTimeStart +"ms "+ dwTimeEnd+ "ms]\n");
 
-        ImageView mImageViewFingerprint = (ImageView)findViewById(R.id.imageView);
+        ImageView mImageViewFingerprint = findViewById(R.id.RegisterImage);
         mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
         dwTimeStart = System.currentTimeMillis();
 //            result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
@@ -146,10 +144,15 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //            debugMessage("SetTemplateFormat(ISO19794) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
         Log.d(TAG,"SetTemplateFormat(SG400) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
 
+        String NFIQString = "";
         int quality1[] = new int[1];
         result = sgfplib.GetImageQuality(mImageWidth, mImageHeight, mRegisterImage, quality1);
-        Log.d(TAG,"GetImageQuality() ret:" +  result + "quality [" + quality1[0] + "]\n");
-
+        //long nfiq = sgfplib.ComputeNFIQ(mRegisterImage, mImageWidth, mImageHeight);
+        long nfiq = sgfplib.ComputeNFIQEx(mRegisterImage, mImageWidth, mImageHeight,mImageDPI);
+        NFIQString =  new String("NFIQ="+ nfiq);
+        Log.d(TAG,NFIQString);
+        Log.d(TAG,"GetImageQuality() ret:" +  result + "quality :" + quality1[0]+ "\n");
+        //return mRegisterImage;
     }
 
     public Bitmap toGrayscale(byte[] mImageBuffer)
@@ -175,7 +178,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
             if (error == SGFDxErrorCode.SGFDX_ERROR_DEVICE_NOT_FOUND)
                 dlgAlert.setMessage("The attached fingerprint device is not supported on Android");
             else
-                dlgAlert.setMessage("Fingerprint device initialization failed!");
+                dlgAlert.setMessage("Fingerprint device failed!");
             dlgAlert.setTitle("SecuGen Fingerprint SDK");
             dlgAlert.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
