@@ -52,14 +52,15 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //        //this.mEditLog.invalidate(); 
 //    }
 
+
     private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            Toast.makeText(getApplicationContext(), "Javatpoint", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "USB Device Inserted Now", Toast.LENGTH_LONG).show();
 
             //Log.d(TAG,"Enter mUsbReceiver.onReceive()");
-            if (ACTION_USB_PERMISSION.equals(action)) {
+            if (ACTION_USB_PERMISSION.equals(action)) { //TODO Check for USB Permission intent
                 synchronized (this) {
                     UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //                            debugMessage("USB BroadcastReceiver PID: " + device.getProductId() + "\n");
 
 //                            Toast.makeText(getApplicationContext(),"Hello Javatpoint",Toast.LENGTH_LONG).show();
+                            checkUSBDeviceAndPermissionGranted();
                         } else
                             Log.d(TAG, "mUsbReceiver.onReceive() Device is null");
                     } else
@@ -93,7 +95,10 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         tabs.setupWithViewPager(viewPager);
 
         mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
-        filter = new IntentFilter(ACTION_USB_PERMISSION);
+//      mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED), 0);
+//        filter = new IntentFilter(ACTION_USB_PERMISSION);
+       filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+
         sgfplib = new JSGFPLib((UsbManager) getSystemService(Context.USB_SERVICE));
         autoOn = new SGAutoOnEventNotifier(sgfplib, this);
         Log.d(TAG,"JSGFPLib version: " + sgfplib.GetJSGFPLibVersion() + "\n");
@@ -104,7 +109,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         Log.d(TAG, "Exit onCreate()");
         mMaxTemplateSize=new int[1];
 
-
+        //Finally call register the broadcast to our filter(requirement) and start checking usb device
+        registerReceiver(mUsbReceiver, filter);
+        checkUSBDeviceAndPermissionGranted();
     }
 
 
@@ -153,6 +160,10 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         Log.d(TAG,NFIQString);
         Log.d(TAG,"GetImageQuality() ret:" +  result + "quality :" + quality1[0]+ "\n");
         //return mRegisterImage;
+        if (Integer.parseInt(NFIQString) < 3)
+            Toast.makeText(getApplicationContext(), "Quality level not appropriate..., Try Again", Toast.LENGTH_LONG).show();
+        else
+            Toast.makeText(getApplicationContext(), "Fingerprint Registered", Toast.LENGTH_LONG).show();
     }
 
     public Bitmap toGrayscale(byte[] mImageBuffer)
@@ -168,22 +179,54 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         return bmpGrayscale;
     }
 
+//    @Override
+//    protected void onNewIntent(Intent intent) {
+//        super.onNewIntent(intent);
+////        setIntent(intent);
+//        Toast.makeText(getApplicationContext(), "At NewIntent "+UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())+"  :"+ intent.getAction(), Toast.LENGTH_LONG).show();
+//        Log.d(TAG,"At NewIntent "+UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())+"  :"+ intent.getAction());
+//        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(intent.getAction())) {
+//            Log.d(TAG,"Usb device inserted");
+//            registerReceiver(mUsbReceiver, filter);
+//        }
+//    }
+
     protected void onResume() {
         super.onResume();
-        registerReceiver(mUsbReceiver, filter);
+//        this.onNewIntent(this.getIntent());
+
         Log.d(TAG, "Enter onResume()");
-        long error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
-        if (error != SGFDxErrorCode.SGFDX_ERROR_NONE) {
+
+    }
+
+    protected void checkUSBDeviceAndPermissionGranted(){
+    long error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
+    if (error != SGFDxErrorCode.SGFDX_ERROR_NONE) {
+        AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
+        if (error == SGFDxErrorCode.SGFDX_ERROR_DEVICE_NOT_FOUND)
+            dlgAlert.setMessage("The attached fingerprint device is not supported on Android");
+        else
+            dlgAlert.setMessage("Fingerprint device failed!");
+        dlgAlert.setTitle("SecuGen Fingerprint SDK");
+        dlgAlert.setPositiveButton("OK",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        // finish();
+                        return;
+                    }
+                }
+        );
+        dlgAlert.setCancelable(false);
+        dlgAlert.create().show();
+    } else {
+        UsbDevice usbDevice = sgfplib.GetUsbDevice();
+        if (usbDevice == null) {
             AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
-            if (error == SGFDxErrorCode.SGFDX_ERROR_DEVICE_NOT_FOUND)
-                dlgAlert.setMessage("The attached fingerprint device is not supported on Android");
-            else
-                dlgAlert.setMessage("Fingerprint device failed!");
+            dlgAlert.setMessage("SecuGen fingerprint sensor not found!");
             dlgAlert.setTitle("SecuGen Fingerprint SDK");
             dlgAlert.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int whichButton) {
-                            // finish();
                             return;
                         }
                     }
@@ -191,90 +234,82 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
             dlgAlert.setCancelable(false);
             dlgAlert.create().show();
         } else {
-            UsbDevice usbDevice = sgfplib.GetUsbDevice();
-            if (usbDevice == null) {
-                AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
-                dlgAlert.setMessage("SecuGen fingerprint sensor not found!");
-                dlgAlert.setTitle("SecuGen Fingerprint SDK");
-                dlgAlert.setPositiveButton("OK",
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int whichButton) {
-                                return;
-                            }
-                        }
-                );
-                dlgAlert.setCancelable(false);
-                dlgAlert.create().show();
-            } else {
-                boolean hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
-                if (!hasPermission) {
-                    if (!usbPermissionRequested) {
-                        Log.e(TAG, "Requesting USB Permission\n ");
-                        //Log.d(TAG, "Call GetUsbManager().requestPermission()");
-                        usbPermissionRequested = true;
-                        sgfplib.GetUsbManager().requestPermission(usbDevice, mPermissionIntent);
-                    } else {
-                        //wait up to 20 seconds for the system to grant USB permission
+            boolean hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
+            if (!hasPermission) {
+                if (!usbPermissionRequested) {
+                    Log.e(TAG, "Requesting USB Permission\n ");
+                    //Log.d(TAG, "Call GetUsbManager().requestPermission()");
+                    usbPermissionRequested = true;
+                    sgfplib.GetUsbManager().requestPermission(usbDevice, mPermissionIntent);
+                } else {
+                    //wait up to 20 seconds for the system to grant USB permission
+                    hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
+                    Log.e(TAG, "Waiting for USB Permission\n");
+                    int i = 0;
+                    while ((hasPermission == false) && (i <= 40)) {
+                        ++i;
+
                         hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
-                        Log.e(TAG, "Waiting for USB Permission\n");
-                        int i = 0;
-                        while ((hasPermission == false) && (i <= 40)) {
-                            ++i;
-
-                            hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            //Log.d(TAG, "Waited " + i*50 + " milliseconds for USB permission");
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
-
+                        //Log.d(TAG, "Waited " + i*50 + " milliseconds for USB permission");
                     }
-                }
-                if (hasPermission) {
-                    Log.d(TAG, "Opening SecuGen Device\n");
-                    error = sgfplib.OpenDevice(0);
-                    Log.d(TAG, "OpenDevice() ret: " + error + "\n");
-                    if (error == SGFDxErrorCode.SGFDX_ERROR_NONE) {
-                        bSecuGenDeviceOpened = true;
-                        SecuGen.FDxSDKPro.SGDeviceInfoParam deviceInfo = new SecuGen.FDxSDKPro.SGDeviceInfoParam();
-                        error = sgfplib.GetDeviceInfo(deviceInfo);
 
-                        Log.d(TAG, "GetDeviceInfo() ret: " + error + "\n");
-                        mImageWidth = deviceInfo.imageWidth;
-                        mImageHeight = deviceInfo.imageHeight;
-                        mImageDPI = deviceInfo.imageDPI;
-                        Log.d(TAG, "Image width: " + mImageWidth + "\n");
-                        Log.d(TAG, "Image height: " + mImageHeight + "\n");
-                        Log.d(TAG, "Image resolution: " + mImageDPI + "\n");
-                        Log.d(TAG, "Serial Number: " + new String(deviceInfo.deviceSN()) + "\n");
-                        //sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
-                        //sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
-                        //Log.d(TAG,"")("TEMPLATE_FORMAT_ISO19794 SIZE: " + mMaxTemplateSize[0] + "\n");
-                        sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
-                        sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
-                        Log.d(TAG, "TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
-                        mRegisterTemplate = new byte[(int) mMaxTemplateSize[0]];
-                        mVerifyTemplate = new byte[(int) mMaxTemplateSize[0]];
-                        //EnableControls();
-                        //boolean smartCaptureEnabled = this.mToggleButtonSmartCapture.isChecked();
-                        //if (smartCaptureEnabled)
-                        //sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte)1);
-                        //else
-                        sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 1);
-                        if (mAutoOnEnabled) {
-                            autoOn.start();
-
-                        }
-                        CaptureFingerPrint();
-                    } else {
-                        Log.d(TAG, "Waiting for USB Permission\n");
-                    }
                 }
+            }
+            if (hasPermission)
+                Log.d(TAG, "Opening SecuGen Device\n");
+            error = sgfplib.OpenDevice(0);
+            Log.d(TAG, "OpenDevice() ret: " + error + "\n");
+            if (error == SGFDxErrorCode.SGFDX_ERROR_NONE) {
+                getDeviceInfo();
+            }
+            else {
+                Log.d(TAG, "Waiting for USB Permission\n");
+            }
+
+        }
+    }
+
+}
+
+
+    protected void getDeviceInfo(){
+            long error;
+            bSecuGenDeviceOpened = true;
+            SecuGen.FDxSDKPro.SGDeviceInfoParam deviceInfo = new SecuGen.FDxSDKPro.SGDeviceInfoParam();
+            error = sgfplib.GetDeviceInfo(deviceInfo);
+
+            Log.d(TAG, "GetDeviceInfo() ret: " + error + "\n");
+            mImageWidth = deviceInfo.imageWidth;
+            mImageHeight = deviceInfo.imageHeight;
+            mImageDPI = deviceInfo.imageDPI;
+            Log.d(TAG, "Image width: " + mImageWidth + "\n");
+            Log.d(TAG, "Image height: " + mImageHeight + "\n");
+            Log.d(TAG, "Image resolution: " + mImageDPI + "\n");
+            Log.d(TAG, "Serial Number: " + new String(deviceInfo.deviceSN()) + "\n");
+            //sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
+            //sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
+            //Log.d(TAG,"")("TEMPLATE_FORMAT_ISO19794 SIZE: " + mMaxTemplateSize[0] + "\n");
+            sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
+            sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
+            Log.d(TAG, "TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
+            mRegisterTemplate = new byte[(int) mMaxTemplateSize[0]];
+            mVerifyTemplate = new byte[(int) mMaxTemplateSize[0]];
+            //EnableControls();
+            //boolean smartCaptureEnabled = this.mToggleButtonSmartCapture.isChecked();
+            //if (smartCaptureEnabled)
+            //sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte)1);
+            //else
+            sgfplib.WriteData(SGFDxConstant.WRITEDATA_COMMAND_ENABLE_SMART_CAPTURE, (byte) 1);
+            if (mAutoOnEnabled) {
+                autoOn.start();
 
             }
-        }
+            //CaptureFingerPrint();
 
     }
 }
