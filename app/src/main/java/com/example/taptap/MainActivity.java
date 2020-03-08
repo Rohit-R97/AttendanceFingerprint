@@ -1,6 +1,7 @@
 package com.example.taptap;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -47,6 +48,8 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     private boolean mAutoOnEnabled;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     long dwTimeStart = 0, dwTimeEnd = 0, dwTimeElapsed = 0;
+    AlertDialog.Builder dlgAlert;
+    AlertDialog alert;
 //    private void debugMessage(String message) {
 //       // this.mEditLog.append(message);
 //        //this.mEditLog.invalidate(); 
@@ -58,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             Toast.makeText(getApplicationContext(), "USB Device Inserted Now", Toast.LENGTH_LONG).show();
-
+            alert.cancel();
             //Log.d(TAG,"Enter mUsbReceiver.onReceive()");
             if (ACTION_USB_PERMISSION.equals(action)) { //TODO Check for USB Permission intent
                 synchronized (this) {
@@ -108,6 +111,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         nCaptureModeN = 0;
         Log.d(TAG, "Exit onCreate()");
         mMaxTemplateSize=new int[1];
+
+        //Instantiate dialog box
+        dlgAlert = new AlertDialog.Builder(this);
 
         //Finally call register the broadcast to our filter(requirement) and start checking usb device
         registerReceiver(mUsbReceiver, filter);
@@ -202,7 +208,8 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     protected void checkUSBDeviceAndPermissionGranted(){
     long error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
     if (error != SGFDxErrorCode.SGFDX_ERROR_NONE) {
-        AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
+        //AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
+
         if (error == SGFDxErrorCode.SGFDX_ERROR_DEVICE_NOT_FOUND)
             dlgAlert.setMessage("The attached fingerprint device is not supported on Android");
         else
@@ -217,22 +224,30 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
                 }
         );
         dlgAlert.setCancelable(false);
-        dlgAlert.create().show();
+//        dlgAlert.create()
+        alert = dlgAlert.create();
+        alert.setCanceledOnTouchOutside(true);
+        alert.show();
     } else {
         UsbDevice usbDevice = sgfplib.GetUsbDevice();
         if (usbDevice == null) {
-            AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
+            //AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
             dlgAlert.setMessage("SecuGen fingerprint sensor not found!");
             dlgAlert.setTitle("SecuGen Fingerprint SDK");
             dlgAlert.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int whichButton) {
+
                             return;
                         }
                     }
             );
             dlgAlert.setCancelable(false);
-            dlgAlert.create().show();
+
+//            dlgAlert.create().show();
+            alert = dlgAlert.create();
+            alert.setCanceledOnTouchOutside(true);
+            alert.show();
         } else {
             boolean hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
             if (!hasPermission) {
