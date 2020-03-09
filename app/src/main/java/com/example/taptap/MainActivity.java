@@ -147,15 +147,23 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
     public void SGFingerPresentCallback (){
         //autoOn.stop();
-        //byte []  tempFingerPrint;
-        CaptureFingerPrint();
+        byte []  tempFingerPrint1;
+        byte []  tempFingerPrint2;
+        tempFingerPrint1 = CaptureFingerPrint();
+
         Log.d(TAG, "Finger Present here");
+
+        tempFingerPrint2 = CaptureFingerPrint();
+        boolean [] matched = new boolean[1];
+        long res = sgfplib.MatchIsoTemplate(tempFingerPrint1,0,tempFingerPrint2,0,SGFDxSecurityLevel.SL_NORMAL,matched);
+        Log.d(TAG,"Res: "+res+" matched val: "+matched[0]);
+        //        autoOn.stop();
         //long res=0;
        // res = sgfplib.GetImageEx(tempFingerPrint,2000, 50);
         //fingerDetectedHandler.sendMessage(new Message());
     }
 
-    public void CaptureFingerPrint(){
+    public byte [] CaptureFingerPrint(){
        mRegisterImage = new byte[mImageWidth*mImageHeight];
 //        long result  = sgfplib.GetImage(buffer);
         if (mRegisterImage != null)
@@ -225,6 +233,31 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
                     return null;
                 }
             });
+
+
+
+        SGFingerInfo fpInfo = new SGFingerInfo();
+        fpInfo.FingerNumber = 1;
+        fpInfo.ImageQuality = quality1[0];
+        fpInfo.ImpressionType = SGImpressionType.SG_IMPTYPE_LP;
+        fpInfo.ViewNumber = 1;
+
+        for (int i=0; i< mRegisterTemplate.length; ++i)
+            mRegisterTemplate[i] = 0;
+        dwTimeStart = System.currentTimeMillis();
+        result = sgfplib.CreateTemplate(fpInfo, mRegisterImage, mRegisterTemplate);
+//        DumpFile("register.min", mRegisterTemplate);
+        dwTimeEnd = System.currentTimeMillis();
+        dwTimeElapsed = dwTimeEnd-dwTimeStart;
+        Log.d(TAG, "CreateTemplate() ret:" + result + " [" + dwTimeElapsed + "ms]\n");
+
+        int[] size = new int[1];
+        result = sgfplib.GetTemplateSize(mRegisterTemplate, size);
+        Log.d(TAG, "GetTemplateSize() ret:" + result+ " size [" + size[0] + "] \n");
+//        for (int i=0; i< mRegisterTemplate.length; ++i)
+//            Log.d(TAG,"val: "+ mRegisterTemplate[i]);
+
+        return mRegisterTemplate;
 
     }
 
@@ -397,6 +430,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //            sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
 //            sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
 //            Log.d(TAG, "TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
+            sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
             mRegisterTemplate = new byte[(int) mMaxTemplateSize[0]];
             mVerifyTemplate = new byte[(int) mMaxTemplateSize[0]];
             //EnableControls();
