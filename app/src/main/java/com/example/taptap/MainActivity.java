@@ -157,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
     public void CaptureFingerPrint(){
        mRegisterImage = new byte[mImageWidth*mImageHeight];
-//        long result = sgfplib.GetImage(buffer);
+//        long result  = sgfplib.GetImage(buffer);
         if (mRegisterImage != null)
             mRegisterImage = null;
         mRegisterImage = new byte[mImageWidth*mImageHeight];
@@ -169,6 +169,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
         Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed +"ms "+ dwTimeStart +"ms "+ dwTimeEnd+ "ms]\n");
+        Log.d(TAG,"byte arr" + mRegisterImage);
 
         runThroughUIThread("", new Callable<Void>() {
                     public Void call() {
@@ -199,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
 //            debugMessage("SetTemplateFormat(ISO19794) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
-        Log.d(TAG,"SetTemplateFormat(SG400) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
+        Log.d(TAG,"SetTemplateFormat ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
 
 //        String NFIQString = "";
         int quality1[] = new int[1];
@@ -393,9 +394,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
             //sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
             //sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
             //Log.d(TAG,"")("TEMPLATE_FORMAT_ISO19794 SIZE: " + mMaxTemplateSize[0] + "\n");
-            sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
-            sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
-            Log.d(TAG, "TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
+//            sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
+//            sgfplib.GetMaxTemplateSize(mMaxTemplateSize);
+//            Log.d(TAG, "TEMPLATE_FORMAT_SG400 SIZE: " + mMaxTemplateSize[0] + "\n");
             mRegisterTemplate = new byte[(int) mMaxTemplateSize[0]];
             mVerifyTemplate = new byte[(int) mMaxTemplateSize[0]];
             //EnableControls();
