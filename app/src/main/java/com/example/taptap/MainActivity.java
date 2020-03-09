@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
         //this.mCheckBoxMatched.setChecked(false);
         dwTimeStart = System.currentTimeMillis();
-        long result = sgfplib.GetImageEx(mRegisterImage, 2000, 100);
+        long result = sgfplib.GetImageEx(mRegisterImage, 2000, 80);
         //DumpFile("register.raw", mRegisterImage);
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //        mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
         dwTimeStart = System.currentTimeMillis();
 //            result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
-        result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
+        result = sgfplib.SetTemplateFormat(SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794_COMPACT);
         dwTimeEnd = System.currentTimeMillis();
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
 //            debugMessage("SetTemplateFormat(ISO19794) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
@@ -204,13 +204,13 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //        String NFIQString = "";
         int quality1[] = new int[1];
         result = sgfplib.GetImageQuality(mImageWidth, mImageHeight, mRegisterImage, quality1);
-        //long nfiq = sgfplib.ComputeNFIQ(mRegisterImage, mImageWidth, mImageHeight);
-        long nfiq = sgfplib.ComputeNFIQEx(mRegisterImage, mImageWidth, mImageHeight,mImageDPI);
+        long nfiq = sgfplib.ComputeNFIQ(mRegisterImage, mImageWidth, mImageHeight);
+//        long nfiq = sgfplib.ComputeNFIQEx(mRegisterImage, mImageWidth, mImageHeight,mImageDPI);
 //        NFIQString =  new String("NFIQ="+ nfiq);
         Log.d(TAG,"NFIQ: "+nfiq);
         Log.d(TAG,"GetImageQuality() ret:" +  result + "quality :" + quality1[0]+ "\n");
         //return mRegisterImage;
-        if (nfiq < 3)
+        if (quality1[0] < 50)
             runThroughUIThread("", new Callable<Void>() {
                 public Void call() {
                     Toast.makeText(getApplicationContext(), "Quality level not appropriate..., Try Again", Toast.LENGTH_SHORT).show();
