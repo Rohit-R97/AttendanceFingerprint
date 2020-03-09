@@ -24,6 +24,7 @@ import com.example.taptap.ui.main.SectionsPagerAdapter;
 import com.google.android.material.tabs.TabLayout;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.Callable;
 
 import SecuGen.FDxSDKPro.*;
 
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     private static final String TAG = "SecuGen USB";
     private PendingIntent mPermissionIntent;
     private IntentFilter filter;
+    private IntentFilter filter2;
     private JSGFPLib sgfplib;
     private boolean usbPermissionRequested;
     private boolean bSecuGenDeviceOpened;
@@ -50,6 +52,8 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     long dwTimeStart = 0, dwTimeEnd = 0, dwTimeElapsed = 0;
     AlertDialog.Builder dlgAlert;
     AlertDialog alert;
+    private  UsbDevice usbDevice;
+    long error;
 //    private void debugMessage(String message) {
 //       // this.mEditLog.append(message);
 //        //this.mEditLog.invalidate(); 
@@ -60,10 +64,24 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            Toast.makeText(getApplicationContext(), "USB Device Inserted Now", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "USB Device Inserted Now", Toast.LENGTH_SHORT).show();
+            //error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
             alert.cancel();
+            error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
+            usbDevice = sgfplib.GetUsbDevice();
+            askSGPermissions();
             //Log.d(TAG,"Enter mUsbReceiver.onReceive()");
-            if (ACTION_USB_PERMISSION.equals(action)) { //TODO Check for USB Permission intent
+//            Toast.makeText(getApplicationContext(), "error code of Init: "+error, Toast.LENGTH_LONG).show();
+
+        }
+
+    };
+
+    private final BroadcastReceiver mUsbPermissionReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if(ACTION_USB_PERMISSION.equals(action)){ //TODO Check for USB Permission intent
                 synchronized (this) {
                     UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
@@ -85,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
             }
         }
 
+
     };
 
     @Override
@@ -96,10 +115,11 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         viewPager.setAdapter(sectionsPagerAdapter);
         TabLayout tabs = findViewById(R.id.tabs);
         tabs.setupWithViewPager(viewPager);
-
+//Toast.makeTe
+//        Toast.makeText(getApplicationContext(), "This context value : "+ this, Toast.LENGTH_LONG).show();
         mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
-//      mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED), 0);
-//        filter = new IntentFilter(ACTION_USB_PERMISSION);
+//        mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED), 0);
+        filter2 = new IntentFilter(ACTION_USB_PERMISSION);
        filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED);
 
         sgfplib = new JSGFPLib((UsbManager) getSystemService(Context.USB_SERVICE));
@@ -117,6 +137,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 
         //Finally call register the broadcast to our filter(requirement) and start checking usb device
         registerReceiver(mUsbReceiver, filter);
+        registerReceiver(mUsbPermissionReceiver, filter2);
+        error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
+        usbDevice = sgfplib.GetUsbDevice();
         checkUSBDeviceAndPermissionGranted();
     }
 
@@ -147,8 +170,29 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         dwTimeElapsed = dwTimeEnd-dwTimeStart;
         Log.d(TAG,"GetImage() ret:" + result + " [" + dwTimeElapsed +"ms "+ dwTimeStart +"ms "+ dwTimeEnd+ "ms]\n");
 
-        ImageView mImageViewFingerprint = findViewById(R.id.RegisterImage);
-        mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
+        runThroughUIThread("", new Callable<Void>() {
+                    public Void call() {
+                        ImageView mImageViewFingerprint = findViewById(R.id.RegisterImage);
+                        mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
+                        return null;
+                    }
+
+                    Bitmap toGrayscale(byte[] mImageBuffer)
+                    {
+                        byte[] Bits = new byte[mImageBuffer.length * 4];
+                        for (int i = 0; i < mImageBuffer.length; i++) {
+                            Bits[i * 4] = Bits[i * 4 + 1] = Bits[i * 4 + 2] = mImageBuffer[i]; // Invert the source bits
+                            Bits[i * 4 + 3] = -1;// 0xff, that's the alpha.
+                        }
+
+                        Bitmap bmpGrayscale = Bitmap.createBitmap(mImageWidth, mImageHeight, Bitmap.Config.ARGB_8888);
+                        bmpGrayscale.copyPixelsFromBuffer(ByteBuffer.wrap(Bits));
+                        return bmpGrayscale;
+                    }
+                }
+        );
+//        ImageView mImageViewFingerprint = findViewById(R.id.RegisterImage);
+//        mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
         dwTimeStart = System.currentTimeMillis();
 //            result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_ISO19794);
         result = sgfplib.SetTemplateFormat(SecuGen.FDxSDKPro.SGFDxTemplateFormat.TEMPLATE_FORMAT_SG400);
@@ -157,33 +201,72 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
 //            debugMessage("SetTemplateFormat(ISO19794) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
         Log.d(TAG,"SetTemplateFormat(SG400) ret:" +  result + " [" + dwTimeElapsed + "ms]\n");
 
-        String NFIQString = "";
+//        String NFIQString = "";
         int quality1[] = new int[1];
         result = sgfplib.GetImageQuality(mImageWidth, mImageHeight, mRegisterImage, quality1);
         //long nfiq = sgfplib.ComputeNFIQ(mRegisterImage, mImageWidth, mImageHeight);
         long nfiq = sgfplib.ComputeNFIQEx(mRegisterImage, mImageWidth, mImageHeight,mImageDPI);
-        NFIQString =  new String("NFIQ="+ nfiq);
-        Log.d(TAG,NFIQString);
+//        NFIQString =  new String("NFIQ="+ nfiq);
+        Log.d(TAG,"NFIQ: "+nfiq);
         Log.d(TAG,"GetImageQuality() ret:" +  result + "quality :" + quality1[0]+ "\n");
         //return mRegisterImage;
-        if (Integer.parseInt(NFIQString) < 3)
-            Toast.makeText(getApplicationContext(), "Quality level not appropriate..., Try Again", Toast.LENGTH_LONG).show();
+        if (nfiq < 3)
+            runThroughUIThread("", new Callable<Void>() {
+                public Void call() {
+                    Toast.makeText(getApplicationContext(), "Quality level not appropriate..., Try Again", Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+            });
         else
-            Toast.makeText(getApplicationContext(), "Fingerprint Registered", Toast.LENGTH_LONG).show();
+            runThroughUIThread("", new Callable<Void>() {
+                public Void call() {
+                    Toast.makeText(getApplicationContext(), "Fingerprint Registered", Toast.LENGTH_LONG).show();
+                    return null;
+                }
+            });
+
     }
 
-    public Bitmap toGrayscale(byte[] mImageBuffer)
-    {
-        byte[] Bits = new byte[mImageBuffer.length * 4];
-        for (int i = 0; i < mImageBuffer.length; i++) {
-            Bits[i * 4] = Bits[i * 4 + 1] = Bits[i * 4 + 2] = mImageBuffer[i]; // Invert the source bits
-            Bits[i * 4 + 3] = -1;// 0xff, that's the alpha.
-        }
+    public void runThroughUIThread(String simpleParam, final Callable<Void> methodParam) {
+        //your logic code [...]
 
-        Bitmap bmpGrayscale = Bitmap.createBitmap(mImageWidth, mImageHeight, Bitmap.Config.ARGB_8888);
-        bmpGrayscale.copyPixelsFromBuffer(ByteBuffer.wrap(Bits));
-        return bmpGrayscale;
+        //call methodParam
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        methodParam.call();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
     }
+
+//    private void setImage(final byte [] mRegisterImage){
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                ImageView mImageViewFingerprint = findViewById(R.id.RegisterImage);
+//                mImageViewFingerprint.setImageBitmap(this.toGrayscale(mRegisterImage));
+//            }
+//
+//            Bitmap toGrayscale(byte[] mImageBuffer)
+//            {
+//                byte[] Bits = new byte[mImageBuffer.length * 4];
+//                for (int i = 0; i < mImageBuffer.length; i++) {
+//                    Bits[i * 4] = Bits[i * 4 + 1] = Bits[i * 4 + 2] = mImageBuffer[i]; // Invert the source bits
+//                    Bits[i * 4 + 3] = -1;// 0xff, that's the alpha.
+//                }
+//
+//                Bitmap bmpGrayscale = Bitmap.createBitmap(mImageWidth, mImageHeight, Bitmap.Config.ARGB_8888);
+//                bmpGrayscale.copyPixelsFromBuffer(ByteBuffer.wrap(Bits));
+//                return bmpGrayscale;
+//            }
+//        });
+//
+//    }
+
 
 //    @Override
 //    protected void onNewIntent(Intent intent) {
@@ -206,7 +289,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
     }
 
     protected void checkUSBDeviceAndPermissionGranted(){
-    long error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
+
     if (error != SGFDxErrorCode.SGFDX_ERROR_NONE) {
         //AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
 
@@ -229,7 +312,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         alert.setCanceledOnTouchOutside(true);
         alert.show();
     } else {
-        UsbDevice usbDevice = sgfplib.GetUsbDevice();
+//        UsbDevice usbDevice = sgfplib.GetUsbDevice();
         if (usbDevice == null) {
             //AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
             dlgAlert.setMessage("SecuGen fingerprint sensor not found!");
@@ -254,8 +337,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
                 if (!usbPermissionRequested) {
                     Log.e(TAG, "Requesting USB Permission\n ");
                     //Log.d(TAG, "Call GetUsbManager().requestPermission()");
-                    usbPermissionRequested = true;
-                    sgfplib.GetUsbManager().requestPermission(usbDevice, mPermissionIntent);
+                    askSGPermissions();
+//                    usbPermissionRequested = true;
+//                    sgfplib.GetUsbManager().requestPermission(usbDevice, mPermissionIntent);
                 } else {
                     //wait up to 20 seconds for the system to grant USB permission
                     hasPermission = sgfplib.GetUsbManager().hasPermission(usbDevice);
@@ -327,4 +411,9 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
             //CaptureFingerPrint();
 
     }
+    protected void askSGPermissions(){
+        usbPermissionRequested = true;
+        sgfplib.GetUsbManager().requestPermission(usbDevice, mPermissionIntent);
+    }
 }
+
