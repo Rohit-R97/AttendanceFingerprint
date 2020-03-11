@@ -141,6 +141,7 @@ public class MainActivity extends AppCompatActivity implements SGFingerPresentEv
         error = sgfplib.Init(SGFDxDeviceName.SG_DEV_AUTO);
         usbDevice = sgfplib.GetUsbDevice();
         checkUSBDeviceAndPermissionGranted();
+        new DbOperation().execute("bond007","55034684","asdf","qwer");
     }
 
 
